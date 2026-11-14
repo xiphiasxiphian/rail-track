@@ -1,7 +1,7 @@
 use bumpalo::Bump;
 use winnow::{Parser, ascii::{dec_int, float}, combinator::{alt, delimited, opt, preceded, repeat}};
 
-use crate::parser::{ErrorType, In, closing_brace, kw, statement::{Id, Statement}, string::span_string_bump_parser, ws};
+use crate::parser::{ErrorType, In, block, closing_brace, kw, statement::{Id, LaneSelection, Statement}, string::span_string_bump_parser, ws};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Position<'arena>
@@ -70,7 +70,9 @@ impl<'arena> Group<'arena>
             (
                 ws(Statement::id_parser(bump)),
                 alt((
-                    delimited(ws('{'), closing_brace())
+                    block(repeat(0.., ws(Lane::parser(bump))))
+                        .map(|lanes| GroupBody::Lanes(bump.alloc_slice_fill_iter(lanes))),
+                    preceded(ws('='), LaneSelection::parser(bump)).map(GroupBody::Alias)
                 ))
             )
         )
