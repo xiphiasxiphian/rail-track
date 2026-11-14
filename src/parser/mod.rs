@@ -1,6 +1,6 @@
 use bumpalo::Bump;
 use winnow::{
-    LocatingSlice, ModalResult, Parser, ascii::multispace0, combinator::{delimited, not, preceded, repeat, terminated}, error::{ContextError, ErrMode, ParserError, StrContext, StrContextValue}, stream::{AsChar, Stream, StreamIsPartial}, token::one_of,
+    LocatingSlice, ModalResult, Parser, ascii::multispace0, combinator::{delimited, not, preceded, repeat, terminated}, error::{ContextError, ErrMode, ParserError, StrContext, StrContextValue}, stream::{AsChar, Compare, Stream, StreamIsPartial}, token::{literal, one_of},
 };
 
 use crate::parser::{statement::Statement, string::span_parse_string};
@@ -57,4 +57,11 @@ pub fn closing_brace<'a>() -> impl Parser<In<'a>, (), ErrorType>
     ws('}')
         .void()
         .context(StrContext::Expected(StrContextValue::Description("a statement or '}'")))
+}
+
+pub fn block<'a, O, G>(parser: G) -> impl Parser<In<'a>, O, ErrorType>
+where
+    G: Parser<In<'a>, O, ErrorType>,
+{
+    delimited(ws('{'), parser, closing_brace())
 }

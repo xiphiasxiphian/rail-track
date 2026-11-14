@@ -1,7 +1,7 @@
 use bumpalo::Bump;
-use winnow::{Parser, ascii::{dec_int, float}, combinator::{alt, opt, preceded, repeat}};
+use winnow::{Parser, ascii::{dec_int, float}, combinator::{alt, delimited, opt, preceded, repeat}};
 
-use crate::parser::{ErrorType, In, statement::{Id, Statement}, string::span_string_bump_parser, ws};
+use crate::parser::{ErrorType, In, closing_brace, kw, statement::{Id, Statement}, string::span_string_bump_parser, ws};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Position<'arena>
@@ -49,7 +49,7 @@ impl<'arena> Lane<'arena>
     pub fn parser<'a>(bump: &'arena Bump) -> impl Parser<In<'a>, Self, ErrorType>
     {
         preceded(
-            "lane",
+            kw("lane"),
             ws((
                 Statement::id_parser(bump),
                 ws(span_string_bump_parser(bump)),
@@ -58,5 +58,21 @@ impl<'arena> Lane<'arena>
             ))
                 .map(|(id, name, pos, style)| Self { id, display_name: name, position: pos, style}),
         )
+    }
 }
+
+impl<'arena> Group<'arena>
+{
+    pub fn parser<'a>(bump: &'arena Bump) -> impl Parser<In<'a>, Self, ErrorType>
+    {
+        preceded(
+            kw("group"),
+            (
+                ws(Statement::id_parser(bump)),
+                alt((
+                    delimited(ws('{'), closing_brace())
+                ))
+            )
+        )
+    }
 }
