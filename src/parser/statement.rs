@@ -5,7 +5,7 @@ use winnow::{
     combinator::{alt, preceded, repeat, separated_pair},
 };
 
-use crate::parser::{ErrorType, In, lane::Lane, string::span_string_bump_parser, ws};
+use crate::parser::{ErrorType, In, lane::{Lane, LaneSelection}, string::span_string_bump_parser, ws};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Id<'arena>(&'arena str);
@@ -19,14 +19,6 @@ pub enum Location<'arena>
     Distance(Distance),
     Mark(Id<'arena>),
     Expression(/* expresions to allow for like mark + 1 */),
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum LaneSelection<'arena>
-{
-    Single(Id<'arena>),
-    List(&'arena [LaneSelection<'arena>]),
-    Range(Id<'arena>, Id<'arena>),
 }
 
 pub enum Statement<'arena>
