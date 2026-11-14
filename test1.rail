@@ -1,0 +1,178 @@
+# test1.rail: translation of test1.svg
+#
+# Coordinates: marks are SVG x minus 200. Row 0 is the Up Fast line (SVG y 24.5),
+# one row is 6 SVG units, so a one-row diagonal is 7 wide (slope 6:7).
+#
+# Reading of the SVG: grey = surface, pale grey = underground, dotted = proposed,
+# red brackets = tunnel portals, purple = platforms.
+
+diagram "test1" {
+    pitch 6
+    slope 6:7
+
+    style surface     { stroke #767676 }
+    style underground { stroke #d8d8d8  layer below }
+    style proposed    { stroke #767676  dash 1.2 }
+    style portal      { stroke #a00000 }
+    style platform    { fill #9b7bff }
+
+    # ---- lanes (a lane is a row slot, not a train identity) ---------------
+    # `at N` pins a row, `shares X` reuses X's row where the x-ranges never overlap.
+
+    lane NW  "North-west stub"          at -3
+    lane TN1 "Tunnel A, upper"          at -1
+
+    group MAIN {
+        lane UF "Up Fast"               at 0
+        lane DF "Down Fast"
+        lane US "Up Slow"
+        lane DS "Down Slow"
+    }
+
+    lane TN2 "Tunnel A, lower"          shares US
+    lane BAY "Bay"                      at 5
+    lane TB1 "Tunnel B, upper"          shares BAY
+    lane TB2 "Tunnel B, lower"          shares PL1
+
+    lane PL1 "Proposed 1"               at 6   style proposed
+    lane PL2 "Proposed 2"                      style proposed
+    lane LC1 "Tunnel C, upper"          shares PL2
+    lane LC2 "Tunnel C, lower"          at 8
+
+    lane LA1 "Lower A1"                 at 9
+    lane LA2 "Lower A2"
+    lane LB1 "Lower B1"                 at 11.5
+    lane LB2 "Lower B2"
+
+    lane E1 at 7.5      # east approach, four lanes fanning out of LA1/LA2
+    lane E2 at 8.5
+    lane E3 at 9.5
+    lane E4 at 11
+
+    group TA = TN1, TN2
+    group TB = TB1, TB2
+    group LA = LA1, LA2
+    group LB = LB1, LB2
+    group LC = LC1, LC2
+
+    # ---- marks -------------------------------------------------------------
+    mark west      = 0
+    mark east_edge = 1175
+    mark nw_end    = 12
+    mark bay_sw    = 89
+    mark xo_a      = 110
+    mark bay_stop  = 153
+    mark sa0       = 144          # station A
+    mark sa1       = sa0 + 23
+    mark sb0       = 242          # station B
+    mark sb1       = sb0 + 23
+    mark dip0      = 341          # US and DS shift down one row to free row 2 for TN2
+    mark dip1      = 481
+    mark tn1_in    = 448
+    mark tn2_in    = 456
+    mark la_in     = 536          # tunnels A and B emerge into the lower four-track
+    mark tc0       = 612          # tunnel C portals
+    mark tc1       = 663
+    mark scissors  = 697
+    mark throat    = 706
+    mark term      = 742
+
+    # ---- main line: four lanes running off both edges ------------------------
+    run MAIN west -> east_edge
+    boundary MAIN at west
+    boundary MAIN at east_edge
+
+    dip US..DS by 1 over dip0 .. dip1
+
+    # ---- north-west stub dives into a bay --------------------------------------
+    run NW west -> nw_end
+    boundary NW at west
+
+    tunnel "NW tunnel" {
+        link NW -> BAY at nw_end as nw_dive     # 8 rows, so 56 wide; portals are automatic
+    }
+    run BAY nw_dive.end -> bay_stop
+    buffers BAY at bay_stop
+
+    link BAY -> DS at bay_sw                     # branch, rows 5 -> 3
+    crossover DS <-> US at xo_a
+
+    # ---- stations A and B -------------------------------------------------------
+    # A platform takes a slab row; lanes below it are pushed down automatically and
+    # rejoin with a diagonal outside the station extent.
+
+    station "A" sa0 .. sa1 {
+        platform 1     north of UF
+        platform 2, 3  between DF and US         # island, pushes US and DS down
+        platform 4     north of PL1              # pushes PL1 and PL2 down
+        platform 5     end of BAY                # bay platform beyond the buffers
+    }
+
+    station "B" sb0 .. sb1 {
+        platform 1, 2  between DF and US
+        platform 3     south of DS               # DS was pushed down by the island
+    }
+
+    run PL1, PL2 73 -> 190
+    boundary PL1, PL2 at 73
+    boundary PL1, PL2 at 190
+
+    # ---- tunnel A: the fast lines peel off, go underground, reach the lower group -
+    branch UF -> TN1 at 356
+    branch DF -> TN2 at 364
+    crossover US <-> TN2 at 381
+
+    run TN1 -> tn1_in
+    run TN2 -> tn2_in
+
+    tunnel "Tunnel A" {
+        run TN1 tn1_in -> 466
+        run TN2 tn2_in -> 480
+        link TA -> LA to la_in                   # group link: TN1->LA1, TN2->LA2, ends aligned
+    }
+
+    # ---- tunnel B: the slow lines peel off and run under to the lower group ----
+    branch [US, DS] -> [TB1, TB2] at 461
+
+    tunnel "Tunnel B" {
+        link TB -> LB at 476 as tb_dive
+    }
+
+    merge LB -> LA to 603 as lb_merge           # LB lanes end, LA lanes continue
+    run LB tb_dive.end -> lb_merge.start
+
+    # ---- lower four-track group -------------------------------------------------
+    run LA la_in -> throat
+    tunnel LA tc0 .. tc1                        # tunnel C section, portals at both ends
+
+    # two lanes that come off US/DS, cross under the main lanes with a steep drop,
+    # then join LA inside tunnel C. `to` is narrower than the natural span, so the
+    # compiler draws diagonal, vertical, diagonal.
+    link LC2 -> US at 590 to 608 under as cc2
+    link LC1 -> DS at 595 to 610 under as cc1
+
+    run LC2 cc2.start -> 629  style underground
+    run LC1 cc1.start -> 631  style underground
+    link LC2 -> LA2 at 629
+    link LC1 -> LA1 at 631
+
+    # ---- east end: scissors, then a throat fanning two lanes into four ----------
+    scissors LA1 <-> LA2 at scissors
+
+    link LA1 -> E2 at throat                    # half-row jogs: 3.5 wide
+    link LA1 -> E3 at throat
+    link LA2 -> E3 at throat                    # E3 is fed from both sides
+    link LA2 -> E4 at throat
+    link E2 -> E1 at 712
+
+    run E1, E2, E3, E4 -> term
+    buffers E1, E2, E3, E4 at term
+
+    station "Terminus" 722 .. term {
+        platform 1, 2  between E1 and E2        # fits in the free row, nothing pushed
+        platform 3, 4  between E3 and E4
+    }
+
+    # Not translated: the long diagonal from the Up Fast line (SVG path8) and the
+    # red hatched portal pair around it. I could not tell what it connects to.
+}

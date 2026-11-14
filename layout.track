@@ -1,0 +1,43 @@
+diagram "Example Line" {
+    axis horizontal
+    scale schematic                  # or `km` for true distances
+
+    # lanes, top to bottom
+    lane UF "Up Fast"
+    lane US "Up Slow"
+    lane DS "Down Slow"
+    lane DF "Down Fast"
+    lane BR "Branch" below DF
+
+    # named positions along the axis
+    mark west   = 0
+    mark ham    = 4
+    mark tn_w   = 7
+    mark tn_e   = 10
+    mark narrow = 12
+    mark jct    = 15
+    mark end    = 20
+
+    # continuous track: lane(s), from -> to
+    run UF..DF  west -> narrow       # four-track section
+    run US, DS  narrow -> end        # narrows to two
+
+    # connections
+    merge UF -> US  at narrow        # sugar for a `link` ending at the mark
+    merge DF -> DS  at narrow
+    branch DS -> BR at jct           # a diverging turnout
+    run BR      jct+2 -> end
+    buffers BR  at end
+
+    crossover US <-> DS  at ham+2    # two opposed links
+
+    # features
+    station "Hamsford" ham-1 .. ham+1 {
+        platform 1 on US
+        platform 2 on DS
+        passing UF, DF               # fast lines run through without platforms
+    }
+    tunnel tn_w .. tn_e on UF..DF
+    level_crossing at jct+1 across BR
+    signal S12 on UF at ham-2 facing right
+}

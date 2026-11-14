@@ -1,0 +1,83 @@
+# peterborough.rail: ILLUSTRATIVE topology sketch, not surveyed.
+# It exists to test the grammar against a real corridor: platform numbers, which
+# lanes serve which faces, and exact junction positions are placeholders.
+#
+# Orientation: x runs south (left, London) to north (right). Up on the page is west.
+# Features exercised: a 4-track corridor, island and bay platforms, lines on the
+# west side that dive under the ECML to the east side (grade separation), and
+# `phase` for before/after layouts (Werrington junction pre- and post-dive-under).
+
+diagram "Peterborough (sketch)" {
+    pitch 6
+    slope 6:7
+
+    style surface     { stroke #444 }
+    style underground { stroke #bbb  layer below }
+    style disused     { stroke #999  dash 1.2 }
+
+    lane SD "Stamford Down"      at -2        # west side
+    lane SU "Stamford Up"
+
+    group ECML {
+        lane DS "Down Slow"      at 0
+        lane DF "Down Fast"
+        lane UF "Up Fast"
+        lane US "Up Slow"
+    }
+
+    lane E1 "East side 1"        at 5         # Ely side in the south...
+    lane E2 "East side 2"
+    lane G1 "GN/GE 1"            shares E1    # ...GN/GE joint line in the north
+    lane G2 "GN/GE 2"            shares E2
+
+    group STAMFORD = SD, SU
+    group EAST     = E1, E2
+    group GNGE     = G1, G2
+
+    mark west      = 0
+    mark fletton   = 40
+    mark stn0      = 100
+    mark stn1      = 170
+    mark werr      = 260
+    mark north     = 340
+
+    run ECML west -> north
+    boundary ECML at west
+    boundary ECML at north
+
+    # ---- Fletton: west-side lines run under the ECML to the east side ---------
+    run STAMFORD west -> fletton
+    boundary STAMFORD at west
+    tunnel "Under ECML (south)" {
+        link STAMFORD -> EAST at fletton         # crosses all four ECML lanes
+    }
+    run EAST fletton + 49 -> stn0
+
+    # ---- station: islands between lane pairs, a bay on the west -----------------
+    lane BAYW "West bay" at -1
+    station "Peterborough" stn0 .. stn1 {
+        platform A, B   between SU and DS        # numbering is a placeholder
+        platform C, D   between DF and UF
+        platform E      south of US
+        platform F      end of BAYW
+    }
+    run SU stn0 -> werr
+    run SD stn0 -> werr
+    branch SD -> BAYW at stn0 + 20
+    buffers BAYW at stn1 - 10
+
+    # ---- Werrington: before and after the grade-separated junction --------------
+    phase "before" {
+        # trains from the west side cross the ECML on the level
+        scissors DF <-> UF at werr               # placeholder crossing
+        link SU -> G1 at werr                    # at-grade: diamonds are inferred
+    }
+    phase "after" default {
+        tunnel "Werrington dive-under" {
+            link STAMFORD -> GNGE at werr        # one declaration, no conflict with ECML
+        }
+    }
+
+    run GNGE werr + 49 -> north
+    boundary GNGE at north
+}
