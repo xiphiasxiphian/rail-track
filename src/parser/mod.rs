@@ -1,6 +1,6 @@
 use bumpalo::Bump;
 use winnow::{
-    LocatingSlice, ModalResult, Parser, ascii::multispace0, combinator::{delimited, not, preceded, repeat, terminated}, error::{ContextError, ErrMode, ParserError, StrContext, StrContextValue}, stream::{AsChar, Compare, Stream, StreamIsPartial}, token::{literal, one_of},
+    LocatingSlice, ModalResult, Parser, ascii::multispace0, combinator::{delimited, not, preceded, repeat, terminated}, error::{ContextError, ErrMode, ParserError, StrContext, StrContextValue}, stream::{AsChar, Compare, Stream, StreamIsPartial}, token::{literal, one_of, take_while},
 };
 
 use crate::parser::{statement::Statement, string::span_parse_string};
@@ -50,6 +50,11 @@ where
 pub fn kw<'a>(word: &'static str) -> impl Parser<In<'a>, (), ErrorType>
 {
     terminated(word, not(one_of(|c: char| c.is_alphanumeric() || c == '_'))).void()
+}
+
+pub fn kw_slice<'a>(input: &mut In<'a>) -> ParseResult<&'a str>
+{
+    take_while(1.., |c: char| c.is_alphabetic() || c == '_').parse_next(input)
 }
 
 // very handy for making better error messages
