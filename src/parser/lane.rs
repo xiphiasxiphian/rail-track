@@ -46,8 +46,8 @@ impl<'arena> Position<'arena>
     pub fn parser<'a>(bump: &'arena Bump) -> impl Parser<In<'a>, Self, ErrorType>
     {
         alt((
-            preceded("at", ws(float)).map(Self::At),
-            preceded("shares", ws(Statement::id_parser(bump))).map(Self::Shares)
+            preceded(kw("at"), ws(float)).map(Self::At),
+            preceded(kw("shares"), ws(Statement::id_parser(bump))).map(Self::Shares)
         ))
     }
 }
