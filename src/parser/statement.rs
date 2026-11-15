@@ -1,11 +1,9 @@
 use bumpalo::Bump;
 use winnow::{
-    Parser,
-    ascii::{alpha1, alphanumeric1, dec_uint},
-    combinator::{alt, preceded, repeat, separated_pair},
+    Parser, ascii::{alpha1, alphanumeric1, dec_int, dec_uint}, combinator::{alt, dispatch, empty, fail, opt, preceded, repeat, separated_pair, todo}, token::one_of,
 };
 
-use crate::parser::{ErrorType, In, lane::{Lane, LaneSelection}, string::span_string_bump_parser, ws};
+use crate::parser::{ErrorType, In, ParseResult, kw_slice, lane::{Lane, LaneSelection}, string::span_string_bump_parser, ws};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Id<'arena>(&'arena str);
@@ -13,12 +11,20 @@ pub struct Id<'arena>(&'arena str);
 #[derive(Clone, Copy, Debug)]
 pub struct Distance(u64);
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Anchor
+{
+    Start,
+    End,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub enum Location<'arena>
 {
     Distance(Distance),
     Mark(Id<'arena>),
-    Expression(/* expresions to allow for like mark + 1 */),
+    Offset(Id<'arena>, i64),
+    Anchor(Id<'arena>, Anchor)
 }
 
 pub enum Statement<'arena>
@@ -73,5 +79,46 @@ impl<'arena> Statement<'arena>
                 distance: Distance(distance),
             }),
         )
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+enum Suffix
+{
+    Anchor(Anchor),
+    Offset(i64)
+}
+
+impl<'arena> Location<'arena>
+{
+    pub fn parser<'a>(bump: &'arena Bump) -> impl Parser<In<'a>, Self, ErrorType>
+    {
+        alt((
+            dec_uint.map(|n: u64| Self::Distance(Distance(n))),
+            (
+                Statement::id_parser(bump),
+                opt(alt((
+                    preceded('.', Self::parse_anchor).map(Suffix::Anchor),
+                    dec_int.map(Suffix::Offset)
+                )))
+            )
+            .map(|(id, suffix)| match suffix {
+                None => Self::Mark(id),
+                Some(Suffix::Anchor(anchor)) => Self::Anchor(id, anchor),
+                Some(Suffix::Offset(offset)) => Self::Offset(id, offset),
+            })
+        ))
+
+        // TODO: error stuff idk
+    }
+
+    fn parse_anchor(input: &mut In) -> ParseResult<Anchor>
+    {
+        dispatch! {
+            kw_slice;
+            "start" => empty.value(Anchor::Start),
+            "end" => empty.value(Anchor::End),
+            _ => fail
+        }.parse_next(input)
     }
 }
