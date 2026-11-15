@@ -8,6 +8,7 @@ use crate::parser::{statement::Statement, string::span_parse_string};
 pub mod statement;
 pub mod string;
 pub mod lane;
+pub mod style;
 
 type Span<'a> = LocatingSlice<&'a str>;
 type In<'a> = Span<'a>;
