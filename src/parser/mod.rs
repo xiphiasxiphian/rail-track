@@ -9,6 +9,7 @@ pub mod statement;
 pub mod string;
 pub mod lane;
 pub mod style;
+pub mod link;
 
 type Span<'a> = LocatingSlice<&'a str>;
 type In<'a> = Span<'a>;
