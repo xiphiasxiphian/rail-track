@@ -1,6 +1,7 @@
+use bumpalo::Bump;
 use winnow::{Parser, Result, ascii::float, combinator::{alt, dispatch, empty, fail, preceded, repeat, seq}, stream::AsChar, token::take_while};
 
-use crate::parser::{In, ParseResult, kw, kw_slice, statement::Id, ws};
+use crate::parser::{ErrorType, In, ParseResult, block, kw, kw_slice, statement::{Id, Statement}, ws};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Colour
@@ -75,5 +76,18 @@ impl StyleAttribute
             ).map(Self::Layer),
             _  => fail // TODO: better errors here
         }.parse_next(input)
+    }
+}
+
+impl<'arena> Style<'arena>
+{
+    pub fn parser<'a>(bump: &'arena Bump) -> impl Parser<In<'a>, Self, ErrorType>
+    {
+        seq!(Self {
+            _: kw("style"),
+            id: Statement::id_parser(bump),
+            attributes: block(repeat(0.., StyleAttribute::parse))
+                .map(|ps: Vec<StyleAttribute>| bump.alloc_slice_copy(&ps))
+        })
     }
 }
